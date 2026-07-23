@@ -1,7 +1,6 @@
 import allure
 
 from pages.login_page import LoginPage
-from pages.main_page import MainPage
 from pages.password_pages import ForgotPasswordPage, ResetPasswordPage
 
 
@@ -14,7 +13,7 @@ class TestPasswordRecovery:
         login_page = LoginPage(driver).open()
         login_page.click_restore_password()
 
-        assert 'forgot-password' in driver.current_url
+        assert login_page.is_forgot_password_page_opened()
 
     @allure.title('Ввод почты и клик по кнопке Восстановить')
     def test_enter_email_and_click_restore(self, driver, user):

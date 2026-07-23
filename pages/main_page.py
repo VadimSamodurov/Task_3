@@ -1,76 +1,54 @@
-from selenium.webdriver.common.action_chains import ActionChains
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.wait import WebDriverWait
-
 from data.urls import MAIN_PAGE_URL
 from locators.locators import MainPageLocators
+from pages.base_page import BasePage
 
 
-class MainPage:
-    def __init__(self, driver):
-        self.driver = driver
-        self.wait = WebDriverWait(driver, 15)
-
+class MainPage(BasePage):
     def open(self):
-        self.driver.get(MAIN_PAGE_URL)
-        self.wait.until(EC.visibility_of_element_located(MainPageLocators.CONSTRUCTOR_BUTTON))
-        self._wait_overlays_gone()
+        self.open_url(MAIN_PAGE_URL)
+        self.wait_for_visibility(MainPageLocators.CONSTRUCTOR_BUTTON)
+        self.wait_overlays_gone()
         return self
 
-    def _wait_overlays_gone(self):
-        overlays = self.driver.find_elements(*MainPageLocators.MODAL_OVERLAY)
-        for overlay in overlays:
-            if overlay.is_displayed():
-                self.wait.until(EC.invisibility_of_element(overlay))
-
-    def _click(self, locator):
-        self._wait_overlays_gone()
-        element = self.wait.until(EC.element_to_be_clickable(locator))
-        self.driver.execute_script('arguments[0].scrollIntoView({block: "center"});', element)
-        try:
-            element.click()
-        except Exception:
-            self.driver.execute_script('arguments[0].click();', element)
-
     def click_personal_account(self):
-        self._click(MainPageLocators.PERSONAL_ACCOUNT_BUTTON)
+        self.click_element(MainPageLocators.PERSONAL_ACCOUNT_BUTTON)
 
     def click_constructor(self):
-        self._click(MainPageLocators.CONSTRUCTOR_BUTTON)
+        self.click_element(MainPageLocators.CONSTRUCTOR_BUTTON)
 
     def click_order_feed(self):
-        self._click(MainPageLocators.ORDER_FEED_BUTTON)
+        self.click_element(MainPageLocators.ORDER_FEED_BUTTON)
 
     def click_ingredient(self):
-        self._click(MainPageLocators.INGREDIENT)
+        self.click_element(MainPageLocators.INGREDIENT)
 
     def is_modal_displayed(self):
-        return self.wait.until(EC.visibility_of_element_located(MainPageLocators.MODAL)).is_displayed()
+        return self.is_element_displayed(MainPageLocators.MODAL)
+
+    def is_modal_closed(self):
+        return not self.has_visible_elements(MainPageLocators.MODAL)
 
     def close_modal(self):
-        buttons = self.driver.find_elements(*MainPageLocators.MODAL_CLOSE_BUTTON)
+        buttons = self.find_elements(MainPageLocators.MODAL_CLOSE_BUTTON)
         visible = [button for button in buttons if button.is_displayed()]
-        button = visible[-1] if visible else self.wait.until(
-            EC.element_to_be_clickable(MainPageLocators.MODAL_CLOSE_BUTTON)
-        )
+        button = visible[-1] if visible else self.wait_for_visibility(MainPageLocators.MODAL_CLOSE_BUTTON)
         try:
             button.click()
         except Exception:
             self.driver.execute_script('arguments[0].click();', button)
-        self.wait.until(EC.invisibility_of_element_located(MainPageLocators.MODAL))
+        self.wait_for_invisibility(MainPageLocators.MODAL)
 
-    def get_ingredient_counter(self, ingredient_element):
+    def get_ingredient_counter(self, ingredient_element=None):
+        if ingredient_element is None:
+            ingredient_element = self.wait_for_visibility(MainPageLocators.BUN_INGREDIENT)
         counter = ingredient_element.find_element(*MainPageLocators.INGREDIENT_COUNTER)
         return int(counter.text)
 
     def add_ingredient_to_order(self):
-        ingredient = self.wait.until(EC.visibility_of_element_located(MainPageLocators.BUN_INGREDIENT))
-        basket = self.wait.until(EC.visibility_of_element_located(MainPageLocators.CONSTRUCTOR_BASKET))
-        self.driver.execute_script('arguments[0].scrollIntoView({block: "center"});', ingredient)
-
-        ActionChains(self.driver).click_and_hold(ingredient).pause(0.5).move_to_element(basket).pause(0.5).release().perform()
-        if self._get_counter_safe(ingredient) == 0:
-            ActionChains(self.driver).drag_and_drop(ingredient, basket).perform()
+        ingredient = self.wait_for_visibility(MainPageLocators.BUN_INGREDIENT)
+        basket = self.wait_for_visibility(MainPageLocators.CONSTRUCTOR_BASKET)
+        self.scroll_to_element(ingredient)
+        self.drag_and_drop(ingredient, basket)
         if self._get_counter_safe(ingredient) == 0:
             self.driver.execute_script(
                 """
@@ -112,17 +90,20 @@ class MainPage:
             return 0
 
     def click_place_order(self):
-        self._click(MainPageLocators.PLACE_ORDER_BUTTON)
+        self.click_element(MainPageLocators.PLACE_ORDER_BUTTON)
 
     def get_order_number(self):
         try:
-            self.wait.until(EC.invisibility_of_element_located(MainPageLocators.LOADING_OVERLAY))
+            self.wait_for_invisibility(MainPageLocators.LOADING_OVERLAY)
         except Exception:
             pass
-        number = self.wait.until(EC.visibility_of_element_located(MainPageLocators.ORDER_NUMBER))
+        number = self.wait_for_visibility(MainPageLocators.ORDER_NUMBER)
         self.wait.until(lambda _: number.text.strip() not in ('', '9999'))
         return number.text.strip()
 
-    def current_url_contains(self, path):
-        self.wait.until(EC.url_contains(path))
-        return path in self.driver.current_url
+    def is_constructor_opened(self):
+        current_url = self.get_current_url().rstrip('/')
+        return current_url.endswith('stellarburgers.education-services.ru') or self.get_current_url().endswith('/')
+
+    def is_order_feed_opened(self):
+        return self.url_contains('feed')

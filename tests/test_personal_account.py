@@ -36,6 +36,7 @@ class TestPersonalAccount:
         LoginPage(driver).open().login(user_data['email'], user_data['password'])
         MainPage(driver).click_personal_account()
 
-        ProfilePage(driver).wait_until_opened().click_logout()
+        profile_page = ProfilePage(driver).wait_until_opened()
+        profile_page.click_logout()
 
-        assert 'login' in driver.current_url
+        assert profile_page.is_login_page_opened()

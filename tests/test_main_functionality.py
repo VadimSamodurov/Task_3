@@ -1,6 +1,5 @@
 import allure
 
-from locators.locators import MainPageLocators
 from pages.login_page import LoginPage
 from pages.main_page import MainPage
 
@@ -15,14 +14,14 @@ class TestMainFunctionality:
         main_page.click_order_feed()
         main_page.click_constructor()
 
-        assert driver.current_url.rstrip('/').endswith('stellarburgers.education-services.ru') or driver.current_url.endswith('/')
+        assert main_page.is_constructor_opened()
 
     @allure.title('Переход по клику на Лента заказов')
     def test_go_to_order_feed(self, driver):
         main_page = MainPage(driver).open()
         main_page.click_order_feed()
 
-        assert 'feed' in driver.current_url
+        assert main_page.is_order_feed_opened()
 
     @allure.title('Клик на ингредиент открывает всплывающее окно')
     def test_ingredient_modal_opens(self, driver):
@@ -38,8 +37,7 @@ class TestMainFunctionality:
         assert main_page.is_modal_displayed()
         main_page.close_modal()
 
-        opened_modals = [el for el in driver.find_elements(*MainPageLocators.MODAL) if el.is_displayed()]
-        assert len(opened_modals) == 0
+        assert main_page.is_modal_closed()
 
     @allure.title('При добавлении ингредиента увеличивается каунтер')
     def test_ingredient_counter_increases(self, driver):
